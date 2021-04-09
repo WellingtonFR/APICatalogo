@@ -25,21 +25,36 @@ namespace APICatalogo.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Produto>>> GetProdutos()
         {
-            return await _context.Produtos.ToListAsync();
+            try
+            {
+                return await _context.Produtos.AsNoTracking().ToListAsync();
+            }
+            catch (Exception)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "Erro ao buscar categoria");
+            }
         }
 
         // GET: api/Produtos/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Produto>> GetProduto(int id)
         {
-            var produto = await _context.Produtos.FindAsync(id);
-
-            if (produto == null)
+            try
             {
-                return NotFound();
+                var produto = await _context.Produtos.FindAsync(id);
+
+                if (produto == null)
+                {
+                    return NotFound();
+                }
+
+                return produto;
+            }
+            catch (Exception)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "Erro ao buscar categoria");
             }
 
-            return produto;
         }
 
         // PUT: api/Produtos/5
@@ -48,12 +63,20 @@ namespace APICatalogo.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> PutProduto(int id, Produto produto)
         {
-            if (id != produto.ProdutoId)
+            try
             {
-                return BadRequest();
+                if (id != produto.ProdutoId)
+                {
+                    return BadRequest();
+                }
+
+                _context.Entry(produto).State = EntityState.Modified;
+            }
+            catch (Exception)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "Erro ao buscar categoria");
             }
 
-            _context.Entry(produto).State = EntityState.Modified;
 
             try
             {
@@ -63,11 +86,11 @@ namespace APICatalogo.Controllers
             {
                 if (!ProdutoExists(id))
                 {
-                    return NotFound();
+                    return NotFound($"Categoria com id {id} não foi encontrada");
                 }
                 else
                 {
-                    throw;
+                    throw new Exception("Dados em conflito ao salvar categoria");
                 }
             }
 
@@ -80,26 +103,42 @@ namespace APICatalogo.Controllers
         [HttpPost]
         public async Task<ActionResult<Produto>> PostProduto(Produto produto)
         {
-            _context.Produtos.Add(produto);
-            await _context.SaveChangesAsync();
+            try
+            {
+                _context.Produtos.Add(produto);
+                await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetProduto", new { id = produto.ProdutoId }, produto);
+                return CreatedAtAction("GetProduto", new { id = produto.ProdutoId }, produto);
+            }
+            catch (Exception)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "Erro ao buscar categoria");
+            }
+           
         }
 
         // DELETE: api/Produtos/5
         [HttpDelete("{id}")]
         public async Task<ActionResult<Produto>> DeleteProduto(int id)
         {
-            var produto = await _context.Produtos.FindAsync(id);
-            if (produto == null)
+            try
             {
-                return NotFound();
+                var produto = await _context.Produtos.FindAsync(id);
+                if (produto == null)
+                {
+                    return NotFound();
+                }
+
+                _context.Produtos.Remove(produto);
+                await _context.SaveChangesAsync();
+
+                return produto;
             }
-
-            _context.Produtos.Remove(produto);
-            await _context.SaveChangesAsync();
-
-            return produto;
+            catch (Exception)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "Erro ao buscar categoria");
+            }
+           
         }
 
         private bool ProdutoExists(int id)

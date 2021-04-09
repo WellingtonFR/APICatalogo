@@ -27,7 +27,11 @@ namespace APICatalogo
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddControllers();
+            services.AddControllers()
+                .AddNewtonsoftJson(options =>
+                {
+                    options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore;
+                });
             services.AddDbContext<AppDBContext>(options => options.UseMySql(Configuration.GetConnectionString("DefaultConnection")));
         }
 
@@ -39,12 +43,16 @@ namespace APICatalogo
                 app.UseDeveloperExceptionPage();
             }
 
+            //Redireciona Http para Https
             app.UseHttpsRedirection();
 
+            //Habilita o roteamento
             app.UseRouting();
 
+            //Habilita o middleware autorização 
             app.UseAuthorization();
 
+            //Mapeia os endpoints para os controladores
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
