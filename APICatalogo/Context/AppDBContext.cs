@@ -7,9 +7,9 @@ using System.Threading.Tasks;
 
 namespace APICatalogo.Context
 {
-    public class AppDBContext : DbContext
+    public class AppDbContext : DbContext
     {
-        public AppDBContext(DbContextOptions<AppDBContext> options) : base(options)
+        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
         {
 
         }

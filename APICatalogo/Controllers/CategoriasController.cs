@@ -1,157 +1,82 @@
-﻿using System;
+﻿using ApiCatalogo.Repository;
+using APICatalogo.Models;
+using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using APICatalogo.Context;
-using APICatalogo.Models;
 
-namespace APICatalogo.Controllers
+namespace ApiCatalogo.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/[Controller]")]
     [ApiController]
     public class CategoriasController : ControllerBase
     {
-        private readonly AppDBContext _context;
-
-        public CategoriasController(AppDBContext context)
+        private readonly IUnitOfWork _context;
+        public CategoriasController(IUnitOfWork contexto)
         {
-            _context = context;
+            _context = contexto;
         }
 
-        // GET: api/Categorias
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<Categoria>>> GetCategorias()
-        {
-            try
-            {
-                return await _context.Categorias.ToListAsync();
-            }
-            catch (Exception)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Erro ao buscar categoria");
-            }
-        }
-
-        // GET: api/Categorias/produtos
         [HttpGet("produtos")]
-        public async Task<ActionResult<IEnumerable<Categoria>>> GetCategoriasProdutos()
+        public ActionResult<IEnumerable<Categoria>> GetCategoriasProdutos()
         {
-            try
-            {
-                return await _context.Categorias.Include(x=>x.Produtos).ToListAsync();
-            }
-            catch (Exception)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Erro ao buscar categoria");
-            }
+            return _context.CategoriaRepository.GetCategoriasProdutos().ToList();
         }
 
-        // GET: api/Categorias/5
-        [HttpGet("{id}")]
-        public async Task<ActionResult<Categoria>> GetCategoria(int id)
+        [HttpGet]
+        public ActionResult<IEnumerable<Categoria>> Get()
         {
-            try
-            {
-                var categoria = await _context.Categorias.FindAsync(id);
-
-                if (categoria == null)
-                {
-                    return NotFound($"Não foi possivel localizar a categoria com id {id}");
-                }
-
-                return categoria;
-            }
-            catch (Exception)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Erro ao buscar categoria");
-            }
-
+            return _context.CategoriaRepository.Get().ToList();
         }
 
-        // PUT: api/Categorias/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to, for
-        // more details, see https://go.microsoft.com/fwlink/?linkid=2123754.
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutCategoria(int id, Categoria categoria)
+        [HttpGet("{id}", Name = "ObterCategoria")]
+        public ActionResult<Categoria> Get(int id)
         {
-            try
-            {
-                if (id != categoria.CategoriaId)
-                {
-                    return BadRequest($"Não foi possível atualizar a categoria com Id {id}");
-                }
+            var categoria = _context.CategoriaRepository.GetById(p => p.CategoriaId == id);
 
-                _context.Entry(categoria).State = EntityState.Modified;
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
+            if (categoria == null)
             {
-                if (!CategoriaExists(id))
-                {
-                    return NotFound($"Categoria com id {id} não foi encontrada");
-                }
-                else
-                {
-                    throw new Exception("Erro ao alterar categoria");
-                }
+                return NotFound();
             }
-            catch (Exception)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Erro ao buscar categoria");
-            }
-
-            return NoContent();
+            return categoria;
         }
 
-        // POST: api/Categorias
-        // To protect from overposting attacks, enable the specific properties you want to bind to, for
-        // more details, see https://go.microsoft.com/fwlink/?linkid=2123754.
         [HttpPost]
-        public async Task<ActionResult<Categoria>> PostCategoria(Categoria categoria)
+        public ActionResult Post([FromBody] Categoria categoria)
         {
-            try
-            {
-                _context.Categorias.Add(categoria);
-                await _context.SaveChangesAsync();
-                return CreatedAtAction("GetCategoria", new { id = categoria.CategoriaId }, categoria);
-            }
-            catch (Exception)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Erro ao buscar categoria");
-            }
+
+            _context.CategoriaRepository.Add(categoria);
+            _context.Commit();
+
+            return new CreatedAtRouteResult("ObterCategoria",
+                new { id = categoria.CategoriaId }, categoria);
         }
 
-        // DELETE: api/Categorias/5
+        [HttpPut("{id}")]
+        public ActionResult Put(int id, [FromBody] Categoria categoria)
+        {
+            if (id != categoria.CategoriaId)
+            {
+                return BadRequest();
+            }
+
+            _context.CategoriaRepository.Update(categoria);
+            _context.Commit();
+            return Ok();
+        }
+
         [HttpDelete("{id}")]
-        public async Task<ActionResult<Categoria>> DeleteCategoria(int id)
+        public ActionResult<Categoria> Delete(int id)
         {
-            try
+            var categoria = _context.CategoriaRepository.GetById(p => p.CategoriaId == id);
+
+            if (categoria == null)
             {
-                var categoria = await _context.Categorias.FindAsync(id);
-                if (categoria == null)
-                {
-                    return NotFound($"A Categoria de id {id} não foi encontrada");
-                }
-                _context.Categorias.Remove(categoria);
-                await _context.SaveChangesAsync();
-
-                return categoria;
+                return NotFound();
             }
-            catch (Exception)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Erro ao buscar categoria");
-            }
-            
-
-            
-        }
-
-        private bool CategoriaExists(int id)
-        {
-            return _context.Categorias.Any(e => e.CategoriaId == id);
+            _context.CategoriaRepository.Delete(categoria);
+            _context.Commit();
+            return categoria;
         }
     }
 }
+

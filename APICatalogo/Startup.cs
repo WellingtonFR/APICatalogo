@@ -1,4 +1,10 @@
+using ApiCatalogo.Logging;
+using ApiCatalogo.Repository;
 using APICatalogo.Context;
+using APICatalogo.Extensions;
+using APICatalogo.Filter;
+using APICatalogo.Logging;
+using APICatalogo.Repository;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
@@ -27,21 +33,33 @@ namespace APICatalogo
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddScoped<APILoggingFilter>();
             services.AddControllers()
                 .AddNewtonsoftJson(options =>
                 {
                     options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore;
                 });
-            services.AddDbContext<AppDBContext>(options => options.UseMySql(Configuration.GetConnectionString("DefaultConnection")));
+            //Contexto do banco de dados
+            services.AddDbContext<AppDbContext>(options => options.UseMySql(Configuration.GetConnectionString("DefaultConnection")));
+            //Unit of work pattern
+            services.AddScoped<IUnitOfWork, UnitOfWork>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env,ILoggerFactory loggerFactory)
         {
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
             }
+
+            loggerFactory.AddProvider(new CustomLoggerProvider(new CustomLoggerProviderConfiguration
+            {
+                 LogLevel = LogLevel.Information
+            }));
+
+            //Adiciona o middleware de tratamento de erros
+            app.ConfigureExceptionHandler();
 
             //Redireciona Http para Https
             app.UseHttpsRedirection();

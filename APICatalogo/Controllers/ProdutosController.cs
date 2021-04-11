@@ -7,143 +7,124 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using APICatalogo.Context;
 using APICatalogo.Models;
+using APICatalogo.Filter;
+using APICatalogo.Repository;
 
-namespace APICatalogo.Controllers
+//Parâmetros de rota
+//[HttpGet("{id}")] Passando parâmetro único e obrigatório na rota
+//[HttpGet("{id}/{param2}")] Passando mais de um parâmetro obrigatório na rota
+//[HttpGet("{id}/{param2?}")] Passando um parâmetro obrigatório mais um parâmetro opcional na rota único na rota
+//[HttpGet("{id}/{param2="option"}")] Passando um valor padrão se o parâmetro não for informado
+/* 
+ * Mesmo método atendendo mais de um Endpoint
+ * [HttpGet("{id}")] 
+ * [HttpGet("{/id}")]
+*/
+
+//Limitação e filtro em rotas
+//[HttpGet("{id:int:min(1)}")] Aceita somente um inteiro maior que 1
+//[HttpGet("{id:alpha)}")] Aceita somente alfanumérico em uma rota
+//[HttpGet("{id:alpha:lenght(5))}")] Aceita somente alfanumérico com 5 caracteres em uma rota
+//[HttpGet("{id:alpha:maxlenght(5))}")] Aceita somente alfanumérico com no máximo 5 caracteres em uma rota
+
+/*
+ Valores aceitos
+ int
+ alplha
+ bool
+ datetime
+ decimal
+ double
+ float
+ guid
+ */
+
+/*
+ lenght
+ maxlength
+ minlength
+ range
+ min
+ max
+ */
+
+namespace ApiCatalogo.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/[Controller]")]
     [ApiController]
     public class ProdutosController : ControllerBase
     {
-        private readonly AppDBContext _context;
-
-        public ProdutosController(AppDBContext context)
+        private readonly IUnitOfWork _uof;
+        public ProdutosController(IUnitOfWork contexto)
         {
-            _context = context;
+            _uof = contexto;
         }
 
-        // GET: api/Produtos
+        [HttpGet("menorpreco")]
+        public ActionResult<IEnumerable<Produto>> GetProdutosPrecos()
+        {
+            return _uof.ProdutoRepository.GetProdutosPorPreco().ToList();
+        }
+
+        // api/produtos
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Produto>>> GetProdutos()
+        public ActionResult<IEnumerable<Produto>> Get()
         {
-            try
-            {
-                return await _context.Produtos.AsNoTracking().ToListAsync();
-            }
-            catch (Exception)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Erro ao buscar categoria");
-            }
+            return _uof.ProdutoRepository.Get().ToList();
         }
 
-        // GET: api/Produtos/5
-        [HttpGet("{id}")]
-        public async Task<ActionResult<Produto>> GetProduto(int id)
+        // api/produtos/1
+        [HttpGet("{id}", Name = "ObterProduto")]
+        public ActionResult<Produto> Get(int id)
         {
-            try
+            var produto = _uof.ProdutoRepository.GetById(p => p.ProdutoId == id);
+
+            if (produto == null)
             {
-                var produto = await _context.Produtos.FindAsync(id);
-
-                if (produto == null)
-                {
-                    return NotFound();
-                }
-
-                return produto;
+                return NotFound();
             }
-            catch (Exception)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Erro ao buscar categoria");
-            }
-
+            return produto;
         }
 
-        // PUT: api/Produtos/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to, for
-        // more details, see https://go.microsoft.com/fwlink/?linkid=2123754.
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutProduto(int id, Produto produto)
-        {
-            try
-            {
-                if (id != produto.ProdutoId)
-                {
-                    return BadRequest();
-                }
-
-                _context.Entry(produto).State = EntityState.Modified;
-            }
-            catch (Exception)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Erro ao buscar categoria");
-            }
-
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!ProdutoExists(id))
-                {
-                    return NotFound($"Categoria com id {id} não foi encontrada");
-                }
-                else
-                {
-                    throw new Exception("Dados em conflito ao salvar categoria");
-                }
-            }
-
-            return NoContent();
-        }
-
-        // POST: api/Produtos
-        // To protect from overposting attacks, enable the specific properties you want to bind to, for
-        // more details, see https://go.microsoft.com/fwlink/?linkid=2123754.
+        //  api/produtos
         [HttpPost]
-        public async Task<ActionResult<Produto>> PostProduto(Produto produto)
+        public ActionResult Post([FromBody] Produto produto)
         {
-            try
-            {
-                _context.Produtos.Add(produto);
-                await _context.SaveChangesAsync();
+            _uof.ProdutoRepository.Add(produto);
+            _uof.Commit();
 
-                return CreatedAtAction("GetProduto", new { id = produto.ProdutoId }, produto);
-            }
-            catch (Exception)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Erro ao buscar categoria");
-            }
-           
+            return new CreatedAtRouteResult("ObterProduto",
+                new { id = produto.ProdutoId }, produto);
         }
 
-        // DELETE: api/Produtos/5
+        // api/produtos/1
+        [HttpPut("{id}")]
+        public ActionResult Put(int id, [FromBody] Produto produto)
+        {
+            if (id != produto.ProdutoId)
+            {
+                return BadRequest();
+            }
+
+            _uof.ProdutoRepository.update(produto);
+            _uof.Commit();
+            return Ok();
+        }
+
+        //  api/produtos/1
         [HttpDelete("{id}")]
-        public async Task<ActionResult<Produto>> DeleteProduto(int id)
+        public ActionResult<Produto> Delete(int id)
         {
-            try
+            var produto = _uof.ProdutoRepository.GetById(p => p.ProdutoId == id);
+
+            if (produto == null)
             {
-                var produto = await _context.Produtos.FindAsync(id);
-                if (produto == null)
-                {
-                    return NotFound();
-                }
-
-                _context.Produtos.Remove(produto);
-                await _context.SaveChangesAsync();
-
-                return produto;
+                return NotFound();
             }
-            catch (Exception)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Erro ao buscar categoria");
-            }
-           
-        }
 
-        private bool ProdutoExists(int id)
-        {
-            return _context.Produtos.Any(e => e.ProdutoId == id);
+            _uof.ProdutoRepository.Delete(produto);
+            _uof.Commit();
+            return produto;
         }
     }
 }
