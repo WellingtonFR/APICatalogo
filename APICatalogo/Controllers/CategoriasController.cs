@@ -1,6 +1,11 @@
 ﻿using ApiCatalogo.Repository;
+using APICatalogo.DTO;
 using APICatalogo.Models;
+using APICatalogo.Repository;
+using AutoMapper;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -11,61 +16,80 @@ namespace ApiCatalogo.Controllers
     public class CategoriasController : ControllerBase
     {
         private readonly IUnitOfWork _context;
-        public CategoriasController(IUnitOfWork contexto)
+        private readonly IMapper _mapper;
+        public CategoriasController(IUnitOfWork contexto, IMapper mapper)
         {
             _context = contexto;
+            _mapper = mapper;
         }
 
         [HttpGet("produtos")]
-        public ActionResult<IEnumerable<Categoria>> GetCategoriasProdutos()
+        public ActionResult<IEnumerable<CategoriaDTO>> GetCategoriasProdutos()
         {
-            return _context.CategoriaRepository.GetCategoriasProdutos().ToList();
+            var categorias = _context.CategoriaRepository.GetCategoriasProdutos().ToList();
+            var categoriasDTO = _mapper.Map<List<CategoriaDTO>>(categorias);
+            return categoriasDTO;
         }
 
         [HttpGet]
-        public ActionResult<IEnumerable<Categoria>> Get()
+        public ActionResult<IEnumerable<CategoriaDTO>> Get()
         {
-            return _context.CategoriaRepository.Get().ToList();
+            try
+            {
+                var categorias = _context.CategoriaRepository.Get().ToList();
+                var categoriasDTO = _mapper.Map<List<CategoriaDTO>>(categorias);
+                return categoriasDTO;
+            }
+            catch (Exception)
+            {
+
+                return StatusCode(StatusCodes.Status500InternalServerError,"Falha ao conectar ao servidor");
+            }
         }
 
         [HttpGet("{id}", Name = "ObterCategoria")]
-        public ActionResult<Categoria> Get(int id)
+        public ActionResult<CategoriaDTO> Get(int id)
         {
             var categoria = _context.CategoriaRepository.GetById(p => p.CategoriaId == id);
 
             if (categoria == null)
             {
-                return NotFound();
+                return NotFound($"Categoria de id {id} não foi encontrada");
             }
-            return categoria;
+
+            var categoriaDTO = _mapper.Map<CategoriaDTO>(categoria);
+            return categoriaDTO;
         }
 
         [HttpPost]
-        public ActionResult Post([FromBody] Categoria categoria)
+        public ActionResult Post([FromBody] CategoriaDTO categoriaDTO)
         {
-
+            var categoria = _mapper.Map<Categoria>(categoriaDTO);
             _context.CategoriaRepository.Add(categoria);
             _context.Commit();
+            var CategoriaDTO = _mapper.Map<CategoriaDTO>(categoria);
 
             return new CreatedAtRouteResult("ObterCategoria",
                 new { id = categoria.CategoriaId }, categoria);
         }
 
         [HttpPut("{id}")]
-        public ActionResult Put(int id, [FromBody] Categoria categoria)
+        public ActionResult Put(int id, [FromBody] CategoriaDTO categoriaDTO)
         {
-            if (id != categoria.CategoriaId)
+
+            if (id != categoriaDTO.CategoriaId)
             {
                 return BadRequest();
             }
+            var categoria = _mapper.Map<Categoria>(categoriaDTO);
 
-            _context.CategoriaRepository.Update(categoria);
+            _context.CategoriaRepository.update(categoria);
             _context.Commit();
             return Ok();
         }
 
         [HttpDelete("{id}")]
-        public ActionResult<Categoria> Delete(int id)
+        public ActionResult<CategoriaDTO> Delete(int id)
         {
             var categoria = _context.CategoriaRepository.GetById(p => p.CategoriaId == id);
 
@@ -75,7 +99,9 @@ namespace ApiCatalogo.Controllers
             }
             _context.CategoriaRepository.Delete(categoria);
             _context.Commit();
-            return categoria;
+
+            var categoriaDTO = _mapper.Map<CategoriaDTO>(categoria);
+            return categoriaDTO;
         }
     }
 }

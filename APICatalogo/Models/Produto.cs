@@ -16,7 +16,6 @@ namespace APICatalogo.Models
         [MaxLength(80)]
         public string Nome { get; set; }
         [Required]
-        [MaxLength(300)]
         public string Descricao { get; set; }
         [Required]
         public decimal Preco { get; set; }

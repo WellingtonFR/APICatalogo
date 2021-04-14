@@ -9,6 +9,8 @@ using APICatalogo.Context;
 using APICatalogo.Models;
 using APICatalogo.Filter;
 using APICatalogo.Repository;
+using AutoMapper;
+using APICatalogo.DTO;
 
 //Parâmetros de rota
 //[HttpGet("{id}")] Passando parâmetro único e obrigatório na rota
@@ -55,56 +57,67 @@ namespace ApiCatalogo.Controllers
     public class ProdutosController : ControllerBase
     {
         private readonly IUnitOfWork _uof;
-        public ProdutosController(IUnitOfWork contexto)
+        private readonly IMapper _mapper;
+        public ProdutosController(IUnitOfWork contexto,IMapper mapper)
         {
             _uof = contexto;
+            _mapper = mapper;
         }
 
         [HttpGet("menorpreco")]
-        public ActionResult<IEnumerable<Produto>> GetProdutosPrecos()
+        public ActionResult<IEnumerable<ProdutoDTO>> GetProdutosPrecos()
         {
-            return _uof.ProdutoRepository.GetProdutosPorPreco().ToList();
+            var produtos = _uof.ProdutoRepository.GetProdutosPorPreco().ToList();
+            var ProdutoDTO = _mapper.Map<List<ProdutoDTO>>(produtos);
+            return ProdutoDTO; 
         }
 
         // api/produtos
         [HttpGet]
-        public ActionResult<IEnumerable<Produto>> Get()
+        public ActionResult<IEnumerable<ProdutoDTO>> Get()
         {
-            return _uof.ProdutoRepository.Get().ToList();
+            var produtos = _uof.ProdutoRepository.Get().ToList();
+            var ProdutoDTO = _mapper.Map<List<ProdutoDTO>>(produtos);
+            return ProdutoDTO;
         }
 
         // api/produtos/1
         [HttpGet("{id}", Name = "ObterProduto")]
-        public ActionResult<Produto> Get(int id)
+        public ActionResult<ProdutoDTO> Get(int id)
         {
             var produto = _uof.ProdutoRepository.GetById(p => p.ProdutoId == id);
+            var ProdutoDTO = _mapper.Map<ProdutoDTO>(produto);
 
             if (produto == null)
             {
-                return NotFound();
+                return NotFound("Não foi encontrado nenhum produto");
             }
-            return produto;
+            return ProdutoDTO;
         }
 
         //  api/produtos
         [HttpPost]
-        public ActionResult Post([FromBody] Produto produto)
+        public ActionResult Post([FromBody] ProdutoDTO produtoDTO)
         {
+            var produto = _mapper.Map<Produto>(produtoDTO);
             _uof.ProdutoRepository.Add(produto);
             _uof.Commit();
+            var ProdutoDTO = _mapper.Map<ProdutoDTO>(produto);
 
             return new CreatedAtRouteResult("ObterProduto",
-                new { id = produto.ProdutoId }, produto);
+                new { id = produto.ProdutoId }, ProdutoDTO);
         }
 
         // api/produtos/1
         [HttpPut("{id}")]
-        public ActionResult Put(int id, [FromBody] Produto produto)
+        public ActionResult Put(int id, [FromBody] ProdutoDTO produtoDTO)
         {
-            if (id != produto.ProdutoId)
+            if (id != produtoDTO.ProdutoId)
             {
-                return BadRequest();
+                return BadRequest("O id informado não corresponde a nenhum id de categoria");
             }
+
+            var produto = _mapper.Map<Produto>(produtoDTO);
 
             _uof.ProdutoRepository.update(produto);
             _uof.Commit();
@@ -113,18 +126,19 @@ namespace ApiCatalogo.Controllers
 
         //  api/produtos/1
         [HttpDelete("{id}")]
-        public ActionResult<Produto> Delete(int id)
+        public ActionResult<ProdutoDTO> Delete(int id)
         {
             var produto = _uof.ProdutoRepository.GetById(p => p.ProdutoId == id);
 
             if (produto == null)
             {
-                return NotFound();
+                return NotFound($"Não existe produto cadastrado com o id {id}");
             }
 
             _uof.ProdutoRepository.Delete(produto);
             _uof.Commit();
-            return produto;
+            var produtoDTO = _mapper.Map<ProdutoDTO>(produto);
+            return produtoDTO;
         }
     }
 }
