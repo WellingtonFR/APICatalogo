@@ -10,12 +10,17 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
+using System;
+using System.IO;
+using System.Reflection;
 using System.Text;
 
 namespace APICatalogo
@@ -84,6 +89,33 @@ namespace APICatalogo
                      IssuerSigningKey = new SymmetricSecurityKey(
                          Encoding.UTF8.GetBytes(Configuration["Jwt:key"]))
                  });
+
+            services.AddSwaggerGen(c =>
+            {
+                c.SwaggerDoc("v1", new OpenApiInfo
+                {
+                    Version = "v1",
+                    Title = "CatalogoAPI",
+                    Description = "Catálogo de Produtos e Categorias",
+                    Contact = new OpenApiContact
+                    {
+                        Name = "Wellington",
+                        Email = "wellingtondfr@gmail.com",
+                    },
+                    License = new OpenApiLicense
+                    {
+                        Name = "Usar sobre LICX",
+                    }
+                });
+
+            });
+
+            services.AddApiVersioning(options =>
+            {
+                options.AssumeDefaultVersionWhenUnspecified = true;
+                options.DefaultApiVersion = new ApiVersion(1, 0);
+                options.ReportApiVersions = true;
+            });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -113,6 +145,16 @@ namespace APICatalogo
 
             //Habilita o middleware autorização 
             app.UseAuthorization();
+
+            //Habilita o Swagger
+            app.UseSwagger();
+
+            //Registra o gerador Swagger definindo um ou mais documentos Swagger 
+            app.UseSwaggerUI(c =>
+            {
+                c.SwaggerEndpoint("/swagger/v1/swagger.json",
+                    "Cátalogo de Produtos e Categorias");
+            });
 
             //Mapeia os endpoints para os controladores
             app.UseEndpoints(endpoints =>
