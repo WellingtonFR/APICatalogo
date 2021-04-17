@@ -34,6 +34,8 @@ namespace ApiCatalogo.Controllers
         }
 
         [HttpGet]
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public ActionResult<IEnumerable<CategoriaDTO>> Get()
         {
             try
