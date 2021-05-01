@@ -14,6 +14,7 @@ namespace ApiCatalogo.Controllers
 {
     [Authorize(AuthenticationSchemes = "Bearer")]
     [Route("api/[Controller]")]
+    [ApiConventionType(typeof(DefaultApiConventions))]
     [ApiController]
     public class CategoriasController : ControllerBase
     {
@@ -36,6 +37,7 @@ namespace ApiCatalogo.Controllers
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesDefaultResponseType]
         public ActionResult<IEnumerable<CategoriaDTO>> Get()
         {
             try

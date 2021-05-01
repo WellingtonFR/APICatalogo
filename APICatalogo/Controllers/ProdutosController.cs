@@ -53,6 +53,7 @@ using APICatalogo.DTO;
 namespace ApiCatalogo.Controllers
 {
     [Route("api/[Controller]")]
+    [ApiConventionType(typeof(DefaultApiConventions))]
     [ApiController]
     public class ProdutosController : ControllerBase
     {
